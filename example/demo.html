@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        img{
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <img src="./img/dog-5146351_1280.jpg" alt="dog-img" id="dogImg">
+    </div>
+    <div>
+        <input type="range" id="range" min="-255" max="255" value="0">
+        <button type="button" id="init">init</button>
+    </div>
+    <script src="../src/psm.js"></script>
+    <script>
+
+        var img = document.querySelector('#dogImg'),
+        range = document.getElementById('range'),
+        mings = new psm.Filter()
+
+        mings.env(
+            {   
+                setting: {
+                    format: 'image/jpeg',
+                },
+                link: img
+            }   
+        ).then(result => {
+            console.log('이미지가 연결되었습니다.')
+        })
+        
+        function filter(red){
+            mings.set('custom', { red: Number(red) })
+
+            if(img.complete){
+                mings.apply(img)
+                .then(function(url){
+                    img.src = url
+                })
+            }else{
+                img.addEventListener('load', function(){
+                    img.src = mings.apply(img)
+                }, { once: true })
+            }
+        }
+
+        range.addEventListener('input', function(){
+            console.time('filter')
+            filter(range.value)
+            console.timeEnd('filter')
+        })
+
+        var init = document.getElementById('init')
+        init.addEventListener('click', function(){
+            mings.set('init')
+            mings.apply().then(function(url){
+                img.src = url
+            })
+        })
+
+    </script>
+</body>
+</html>
