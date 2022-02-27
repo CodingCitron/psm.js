@@ -29,31 +29,42 @@
 
             },
             binary: {
-                threshold: ['number', 24],
+                threshold: ['number', 0.4],
             },
-            custom: {
+            saturation: {
                 red: ['number', 0],
                 green: ['number', 0],
                 blue: ['number', 0],
                 operator: ['String', '+'], //+, -, =, *, %
             },
             blur: { //블러 옵션
-                radius: ['number', 1],
-                kernel: '',
-                kernelSize: '',
-                mult: ''
+                radius: []
+            },
+            transparency: {
+                alpha: ['number', 255],
             },
             init: {}
         },
-        alpha: ['number', 255],
         link: ['HTMLElemnt', undefined], //element 원본을 유지한다.
     }
 
-    const repository = [] //link의 imageData를 저장한다.
+    const repository = {
+        imgData: undefined, //link의 imageData를 저장한다.
+        blur: { //blurData
+            radius: undefined,
+            kernel: undefined,
+            kernelSize: undefined,
+            mult: undefined
+        }
+    } 
     const queue = [] //apply는 순차적으로 작동하게 만들어야 한다. 
+    /*
+        그런데 이 js 파일에서 구현하는 거보다 해당 파일을 사용하는 js에서 구현하는 게 
+        좋음
+    */
 
     const input = {
-        filter: '',
+        filter: undefined,
         param: {}
     }
 
@@ -61,10 +72,6 @@
         since: '20220217',
         version: '0.1',
         github: 'https://github.com/CodingCitron'
-    }
-
-    function task(){
-               
     }
 
     function getARGB(data, i){
@@ -88,31 +95,37 @@
         }
     }
 
+    // from https://github.com/processing/p5.js/blob/main/src/image/filters.js
     function buildBlurKernel(r) {
-        var radius = (r * 3.5) | 0
+        var blurRadius = input.param.blurRadius,
+        kernel = input.param.kernel,
+        kernelSize = input.param.kernelSize,
+        mult = input.param.mult,
+        radius = (r * 3.5) | 0
+
         radius = radius < 1 ? 1 : radius < 248 ? radius : 248
         
         if (blurRadius !== radius) {
             blurRadius = radius
-            blurKernelSize = (1 + blurRadius) << 1
-            blurKernel = new Int32Array(blurKernelSize)
-            blurMult = new Array(blurKernelSize)
-            for (let l = 0; l < blurKernelSize; l++) {
-                blurMult[l] = new Int32Array(256)
+            kernelSize = (1 + blurRadius) << 1
+            kernel = new Int32Array(kernelSize)
+            mult = new Array(kernelSize)
+            for (let l = 0; l < kernelSize; l++) {
+                mult[l] = new Int32Array(256)
             }
         
             var bk, bki, bm, bmi
         
             for (let i = 1, radiusi = radius - 1; i < radius; i++) {
-                blurKernel[radius + i] = blurKernel[radiusi] = bki = radiusi * radiusi
-                bm = blurMult[radius + i]
-                bmi = blurMult[radiusi--]
+                kernel[radius + i] = kernel[radiusi] = bki = radiusi * radiusi
+                bm = mult[radius + i]
+                bmi = mult[radiusi--]
                 for (let j = 0; j < 256; j++) {
                     bm[j] = bmi[j] = bki * j
                 }
             }
-            bk = blurKernel[radius] = radius * radius
-            bm = blurMult[radius]
+            bk = kernel[radius] = radius * radius
+            bm = mult[radius]
         
             for (let k = 0; k < 256; k++) {
                 bm[k] = bk * k
@@ -232,13 +245,12 @@
     }
 
     const filterOption = {
-        grayscale: function(p, i, a){
+        grayscale: function(p, i){
             var v = 0.2126 * p[i]  + 0.7152 * p[i + 1] + 0.0722 * p[i + 2]
             p[i] = p[i + 1] = p[i + 2] = v
-            p[i + 3] = a
         },
 
-        invert: function(p, i, a){
+        invert: function(p, i){
             /*
             p[i] = p[i] ^ 255 // Invert Red
             p[i+1] = p[i+1] ^ 255 // Invert Green
@@ -251,45 +263,49 @@
             p[i] = p[i] ^ 255 // Invert Red
             p[i+1] = p[i+1] ^ 255 // Invert Green
             p[i+2] = p[i+2] ^ 255 // Invert Blue
-            p[i + 3] = a
         },
 
-        brightness: function(p, i, a){
+        brightness: function(p, i){
             var v = input.param.value || correction.filter.brightness.value[1],
             data
 
-            if(correction.link[1]) data = repository[0].data
+            if(correction.link[1]) data = repository.imgData.data
             else data = p
 
             p[i] = data[i] + v
             p[i + 1] = data[i + 1] + v
             p[i + 2] = data[i + 2] + v
-            p[i + 3] = a
         },
 
-        sepia: function(p, i, a){
-            var r = p[i],
-            g = p[i + 1],
-            b = p[i + 2]
+        sepia: function(p, i){
+            var data = p
+
+            if(correction.link[1]) data = repository.imgData.data
+
+            var r = data[i],
+            g = data[i + 1],
+            b = data[i + 2]
 
             p[i] = r * 0.3588 + g * 0.7044 + b * 0.1368
             p[i + 1] = r * 0.2990 + g * 0.5870 + b * 0.1140
             p[i + 2] = r * 0.2392 + g * 0.4696 + b * 0.0912
-            p[i + 3] = a
         },
 
         //https://stackoverflow.com/questions/10521978/html5-canvas-image-contrast/37714937
-        contrast: function(p, i, a){
+        contrast: function(p, i){
             var contrastValue = input.param.value || correction.filter.contrast.value[1],
             contrast = (contrastValue/100) + 1,  //convert to decimal & shift range: [0..2]
-            intercept = 128 * (1 - contrast)
-            p[i] = p[i] * contrast + intercept
-            p[i + 1] = p[i + 1] * contrast + intercept
-            p[i + 2] = p[i + 2] * contrast + intercept
-            p[i + 3] = a
+            intercept = 128 * (1 - contrast),
+            data = p
+
+            if(correction.link[1]) data = repository.imgData.data
+
+            p[i] = data[i] * contrast + intercept
+            p[i + 1] = data[i + 1] * contrast + intercept
+            p[i + 2] = data[i + 2] * contrast + intercept
         },
 
-        binary: function(p, i, a){
+        binary: function(p, i){
             var threshold = input.param.threshold || correction.filter.binary.threshold[1],
             gray = 0.2126 * p[i]  + 0.7152 * p[i + 1] + 0.0722 * p[i + 2],
             val, thresh = Math.floor(threshold * 255)
@@ -297,25 +313,36 @@
             if (gray >= thresh) val = 255
             else val = 0
             p[i] = p[i + 1] = p[i + 2] = val
-            p[i + 3] = a
         },
         
-        custom: function(p, i, a){
+        saturation: function(p, i){
             var r = input.param.red,
             g = input.param.green,
             b = input.param.blue,
-            colorArray = [r, g, b, a],
+            colorArray = [r, g, b],
             count = 0, j = i === 0? i : i - 4,
-            data,
-            o = input.param.operator || correction.filter.custom.operator[1]
+            data = p,
+            o = input.param.operator || correction.filter.saturation.operator[1]
             
-            if(correction.link[1]) data = repository[0].data
-            else data = p
-
-            for(j; j < i + 4; j++){
+            if(correction.link[1]) data = repository.imgData.data
+            
+            for(j; j < i + 3; j++){
                 p[j] = operator(o, data[j], colorArray[count])
                 count++
             }     
+        },
+
+        transparency: function(p, i){
+            var a = input.param.alpha
+            
+            if(a){
+                if(a < 1 && isFloat(a)){
+                    p[i + 3] = p[i + 3] * a
+                }else{
+                    p[i + 3] = a
+                }
+            }
+
         },
 
         init: function(){}
@@ -328,11 +355,10 @@
     input.param을 통해서 값을 가져오는 것으로 설계하였습니다.
      */
     function progress(imgData){
-        var { filter, param } = input,
-        pixels = imgData.data,
-        alpha = filter !== 'custom'? param.alpha || correction.alpha[1] : param.alpha
+        var filter = input.filter,
+        pixels = imgData.data
 
-        for (let i = 0; i < pixels.length; i += 4) filterOption[filter](pixels, i, alpha)
+        for (let i = 0; i < pixels.length; i += 4) filterOption[filter](pixels, i)
         return imgData
     }
 
@@ -353,6 +379,9 @@
         return copyObj
     }
 
+    function isInteger(x) { return typeof x === "number" && isFinite(x) && Math.floor(x) === x }
+    function isFloat(x) { return !!(x % 1) }
+
     Object.seal(correction)
     Object.seal(input)
     Object.seal(filterOption)
@@ -368,8 +397,8 @@
     }
 
     Filter.prototype.env = function({ width, height, setting, link }){
-        this.canvas.width = width? width : (link? link.naturalWidth : 300)
-        this.canvas.height = height? height : (link? link.naturalHeight : 150)
+        this.canvas.width = width? width : (link? link.width : 300)
+        this.canvas.height = height? height : (link? link.height : 150)
 
         if(setting){
             for(var prop in setting){
@@ -399,14 +428,14 @@
                     return new Promise(function(resolve, reject){
                         ready.then(function(result){
                             self.ctx.drawImage(link, 0, 0)
-                            repository.push(self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height))
+                            repository.imgData = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height)
 
                             resolve(' 이미지 로드 ! ')
                         })
                     })
                 }else{
                     self.ctx.drawImage(link, 0, 0)
-                    repository.push(self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height))
+                    repository.imgData = self.ctx.getImageData(0, 0, self.canvas.width, self.canvas.height)
 
                     return new Promise(function(resolve){
                         resolve(true)
@@ -441,16 +470,7 @@
                         throw TypeError(''+ correction.filter[filter][prop][0] + ' 타입이 아닙니다.')
                     }
                 }else{
-                    if(prop === 'alpha'){
-                        console.log(typeof option[prop])
-                        if(typeof option[prop] === correction[prop][0]){
-                            input.param[prop] = option[prop] 
-                        }else{
-                            throw TypeError(''+ correction[prop][0] + ' 타입이 아닙니다.')
-                        }
-                    }else{
-                        throw Error(''+prop + '는 없는 속성입니다.')
-                    }
+                    throw Error(prop + '은 ' + filter + '에서 지원하는 속성이 아닙니다.')
                 }
             }
         }else{
@@ -458,7 +478,7 @@
         }
     }
 
-    Filter.prototype.defaultSet = function(){ /* correcion 객체는 여기서 수정한다. */
+    Filter.prototype.defaultSet = function({}){ /* correcion 객체는 여기서 수정한다. */
 
     }
 
@@ -476,24 +496,45 @@
         width = setWidth || canvas.width,
         height = setHeight || canvas.height,
         imgData
-
+        
         this.ctx.drawImage(img, 0, 0)
+
+        /*
+        img = img || correction.link[1]       
+        if(input.filter !== 'init' && !img.complete && !correction.link[1]) throw Error('이미지가 로드되지 않았습니다.')
+        if(!img) throw Error('img가 ' + img +' 입니다.') 
+
+        var canvas = this.canvas,
+        width = setWidth || canvas.width,
+        height = setHeight || canvas.height,
+        imgData
+
+        try {
+            this.ctx.drawImage(img, 0, 0)
+        } catch (error) {
+            if(correction.link[1]){ //연결된 이미지가 있다면 비동기 방식으로 생긴 에러시 이미지 다시 그리기 시도 
+                this.ctx.getImageData(left, top, width, height)
+                this.ctx.drawImage(this.ctx.canvas, 0, 0)
+            }else{
+                throw Error('이미지 다시 그리기 실패: ' + error)
+            }
+        }
+        */
 
         if(input.filter === 'init'){
             if(!correction.link[1]) {
                 throw Error( 'correction.link가 ' + correction.link[1] +' 입니다. init은 link가 설정되어야 사용할 수 있습니다.')
             }
-            imgData = repository[0]
+            imgData = repository.imgData
         }else{
             imgData = this.ctx.getImageData(left, top, width, height)
             progress(imgData)
         }
 
-        console.log(imgData)
-
         this.ctx.putImageData(imgData, left, top)
         this.initSet()
 
+        //https://stackoverflow.com/questions/59020799/which-function-should-i-use-todataurl-or-toblob
         if(this.setting.return === 'toBlob'){
             return new Promise(function(resolve, reject){
                 canvas.toBlob(function(blob){

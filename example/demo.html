@@ -12,12 +12,15 @@
     </style>
 </head>
 <body>
+    <header>
+        <h2>Demo</h2>
+    </header>
     <div>
-        <img src="./img/dog-5146351_1280.jpg" alt="dog-img" id="dogImg">
+        <img src="./img/house-6967908_640.jpg" alt="dog-img" id="dogImg">
     </div>
     <div>
         <input type="range" id="range" min="-255" max="255" value="0">
-        <button type="button" id="init">init</button>
+        <button type="button" id="init">초기화</button>
     </div>
     <script src="../src/psm.js"></script>
     <script>
@@ -26,19 +29,18 @@
         range = document.getElementById('range'),
         mings = new psm.Filter()
 
-        mings.env(
-            {   
-                setting: {
-                    format: 'image/jpeg',
-                },
-                link: img
-            }   
-        ).then(result => {
+        mings.env({ 
+            setting: { 
+                format: 'image/jpeg', 
+                return: 'toBlob'
+            }, 
+            link: img
+        }).then(result => {
             console.log('이미지가 연결되었습니다.')
         })
         
         function filter(red){
-            mings.set('custom', { red: Number(red) })
+            mings.set('grayscale')
 
             if(img.complete){
                 mings.apply(img)
