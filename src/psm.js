@@ -223,6 +223,50 @@
         setPixels(pixels, argb)
     }
 
+    function convolute(pixels, ctx, weights, opaque) {
+        var side = Math.round(Math.sqrt(weights.length)),
+        halfSide = Math.floor(side/2),
+        src = pixels.data,
+        sw = pixels.width,
+        sh = pixels.height,
+        // pad output by the convolution matrix
+        w = sw,
+        h = sh,
+        output = ctx.createImageData(w, h),
+        dst = output.data,
+        // go through the destination image pixels
+        alphaFac = opaque ? 1 : 0
+        for (var y = 0; y < h; y++) {
+          for (var x = 0; x < w; x++) {
+            var sy = y,
+            sx = x,
+            dstOff = (y * w + x ) * 4,
+            // calculate the weighed sum of the source image pixels that
+            // fall under the convolution matrix
+            r = 0, g = 0, b = 0, a = 0
+            for (var cy = 0; cy < side; cy++) {
+              for (var cx = 0; cx < side; cx++) {
+                var scy = sy + cy - halfSide,
+                scx = sx + cx - halfSide
+                if (scy >= 0 && scy < sh && scx >= 0 && scx < sw) {
+                  var srcOff = (scy * sw + scx)*4,
+                  wt = weights[cy * side + cx]
+                  r += src[srcOff] * wt
+                  g += src[srcOff+1] * wt
+                  b += src[srcOff+2] * wt
+                  a += src[srcOff+3] * wt
+                }
+              }
+            }
+            dst[dstOff] = r
+            dst[dstOff+1] = g
+            dst[dstOff+2] = b
+            dst[dstOff+3] = a + alphaFac * (255 - a)
+          }
+        }
+        return output
+    }
+
     function operator(operator, ...operand){
 
         var result = operand[0]
@@ -245,12 +289,15 @@
     }
 
     const filterOption = {
-        grayscale: function(p, i){
-            var v = 0.2126 * p[i]  + 0.7152 * p[i + 1] + 0.0722 * p[i + 2]
-            p[i] = p[i + 1] = p[i + 2] = v
+        grayscale: function(pixels){
+            var v 
+            for (var i = 0; i < pixels.data.length; i += 4){
+                v = 0.2126 * pixels.data[i]  + 0.7152 * pixels.data[i + 1] + 0.0722 * pixels.data[i + 2]
+                pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = v
+            }
         },
 
-        invert: function(p, i){
+        invert: function(pixels){
             /*
             p[i] = p[i] ^ 255 // Invert Red
             p[i+1] = p[i+1] ^ 255 // Invert Green
@@ -260,108 +307,114 @@
             p[i + 1] = 255 - p[i + 1] 
             p[i + 2] = 255 - p[i + 2]
             */
-            p[i] = p[i] ^ 255 // Invert Red
-            p[i+1] = p[i+1] ^ 255 // Invert Green
-            p[i+2] = p[i+2] ^ 255 // Invert Blue
+            for (var i = 0; i < pixels.data.length; i += 4){
+                pixels.data[i] = pixels.data[i] ^ 255 // Invert Red
+                pixels.data[i+1] = pixels.data[i+1] ^ 255 // Invert Green
+                pixels.data[i+2] = pixels.data[i+2] ^ 255 // Invert Blue
+            }
         },
 
-        brightness: function(p, i){
+        brightness: function(pixels){
             var v = input.param.value || correction.filter.brightness.value[1],
-            data
+            data = pixels.data
 
             if(correction.link[1]) data = repository.imgData.data
-            else data = p
 
-            p[i] = data[i] + v
-            p[i + 1] = data[i + 1] + v
-            p[i + 2] = data[i + 2] + v
+            for (var i = 0; i < data.length; i += 4){
+                pixels.data[i] = data[i] + v
+                pixels.data[i + 1] = data[i + 1] + v
+                pixels.data[i + 2] = data[i + 2] + v
+            }
         },
 
-        sepia: function(p, i){
-            var data = p
+        sepia: function(pixels){
+            var data = pixels.data
 
             if(correction.link[1]) data = repository.imgData.data
 
-            var r = data[i],
-            g = data[i + 1],
-            b = data[i + 2]
+            for (var i = 0; i < data.length; i += 4){
+                var r = data[i],
+                g = data[i + 1],
+                b = data[i + 2]
 
-            p[i] = r * 0.3588 + g * 0.7044 + b * 0.1368
-            p[i + 1] = r * 0.2990 + g * 0.5870 + b * 0.1140
-            p[i + 2] = r * 0.2392 + g * 0.4696 + b * 0.0912
+                pixels.data[i] = r * 0.3588 + g * 0.7044 + b * 0.1368
+                pixels.data[i + 1] = r * 0.2990 + g * 0.5870 + b * 0.1140
+                pixels.data[i + 2] = r * 0.2392 + g * 0.4696 + b * 0.0912
+            }
         },
 
         //https://stackoverflow.com/questions/10521978/html5-canvas-image-contrast/37714937
-        contrast: function(p, i){
+        contrast: function(pixels){
             var contrastValue = input.param.value || correction.filter.contrast.value[1],
             contrast = (contrastValue/100) + 1,  //convert to decimal & shift range: [0..2]
             intercept = 128 * (1 - contrast),
-            data = p
+            data = pixels.data
 
             if(correction.link[1]) data = repository.imgData.data
 
-            p[i] = data[i] * contrast + intercept
-            p[i + 1] = data[i + 1] * contrast + intercept
-            p[i + 2] = data[i + 2] * contrast + intercept
+            for (var i = 0; i < data.length; i += 4){
+                pixels.data[i] = data[i] * contrast + intercept
+                pixels.data[i + 1] = data[i + 1] * contrast + intercept
+                pixels.data[i + 2] = data[i + 2] * contrast + intercept
+            }
         },
 
-        binary: function(p, i){
+        binary: function(pixels){
             var threshold = input.param.threshold || correction.filter.binary.threshold[1],
-            gray = 0.2126 * p[i]  + 0.7152 * p[i + 1] + 0.0722 * p[i + 2],
-            val, thresh = Math.floor(threshold * 255)
+            p = pixels.data,
+            val, thresh = Math.floor(threshold * 255), gray 
 
-            if (gray >= thresh) val = 255
-            else val = 0
-            p[i] = p[i + 1] = p[i + 2] = val
+            for (var i = 0; i < p.length; i += 4){
+                gray = 0.2126 * p[i]  + 0.7152 * p[i + 1] + 0.0722 * p[i + 2]
+
+                if (gray >= thresh) val = 255
+                else val = 0
+
+                p[i] = p[i + 1] = p[i + 2] = val
+            }
         },
         
-        saturation: function(p, i){
+        saturation: function(pixels){
             var r = input.param.red,
             g = input.param.green,
             b = input.param.blue,
-            colorArray = [r, g, b],
-            count = 0, j = i === 0? i : i - 4,
-            data = p,
-            o = input.param.operator || correction.filter.saturation.operator[1]
-            
-            if(correction.link[1]) data = repository.imgData.data
-            
-            for(j; j < i + 3; j++){
-                p[j] = operator(o, data[j], colorArray[count])
-                count++
-            }     
-        },
+            colorArray = [r, g, b],            
+            data = pixels.data,
+            o = input.param.operator || correction.filter.saturation.operator[1],
+            count
 
-        transparency: function(p, i){
-            var a = input.param.alpha
-            
-            if(a){
-                if(a < 1 && isFloat(a)){
-                    p[i + 3] = p[i + 3] * a
-                }else{
-                    p[i + 3] = a
+            if(correction.link[1]) data = repository.imgData.data
+
+            for (var i = 0; i < data.length; i += 4){
+                count = 0
+                for(var j = i; j < i + 3; j++){
+                    pixels.data[j] = operator(o, data[j], colorArray[count])
+                    count++
                 }
             }
+        },
+
+        transparency: function(pixels){
+            var a = input.param.alpha,
+            p = pixels.data
+
+            if(a){
+                if(a < 1 && isFloat(a)){
+                    for (var i = 0; i < p.length; i += 4){
+                                p[i + 3] = p[i + 3] * a
+                    }
+                }else{
+                    for (var i = 0; i < p.length; i += 4){
+                        p[i + 3] = a
+                    }
+                } 
+            } // if(a)
 
         },
 
         init: function(){}
     }
     
-    /* 
-    progress 함수는 input 속성의 filter 값으로 filterOption 객체의 해당하는 
-    filter 함수를 실행시킵니다. 공통의 값은 progress를 통해서 추가하고 
-    특정 filter에만 필요한 값은 filterOption의 해당 filter 메서드에서 
-    input.param을 통해서 값을 가져오는 것으로 설계하였습니다.
-     */
-    function progress(imgData){
-        var filter = input.filter,
-        pixels = imgData.data
-
-        for (let i = 0; i < pixels.length; i += 4) filterOption[filter](pixels, i)
-        return imgData
-    }
-
     /* util */
     function deepCopyObj(obj){
         var copyObj
@@ -528,7 +581,7 @@
             imgData = repository.imgData
         }else{
             imgData = this.ctx.getImageData(left, top, width, height)
-            progress(imgData)
+            filterOption[input.filter](imgData)
         }
 
         this.ctx.putImageData(imgData, left, top)
