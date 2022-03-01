@@ -27,9 +27,9 @@
 
         var img = document.querySelector('#dogImg'),
         range = document.getElementById('range'),
-        mings = new psm.Filter()
+        psmFilter = new psm.Filter()
 
-        mings.env({ 
+        psmFilter.env({ 
             setting: { 
                 format: 'image/jpeg', 
                 return: 'toBlob'
@@ -40,16 +40,52 @@
         })
         
         function filter(red){
-            mings.set('grayscale')
+            // psmFilter.set('convolute', { 
+            //     weights: 
+            //     [ 0, -1, 0,
+            //     -1, 5, -1,
+            //     0, -1, 0 ],
+            //     opaque: 0
+            // })
+
+            // psmFilter.set('sobel')
+
+            // psmFilter.set('edgeDetection')
+            psmFilter.set('blur', { radius: 5 })
+            // psmFilter.set('embossImage')
+
+            // psmFilter.set('sharpen')
+
+            // psmFilter.set('binary', { 
+            //   threshold: 0.2
+            // })
+
+            // psmFilter.set('saturation', { 
+            //     red: Number(red)
+            // })
+
+            // psmFilter.set('contrast', { 
+            //     value: 32
+            // })
+
+            // psmFilter.set('sepia')
+
+            // psmFilter.set('brightness', { 
+            //     value: 0
+            // })
+
+            // psmFilter.set('invert')
+
+            // psmFilter.set('grayscale')
 
             if(img.complete){
-                mings.apply(img)
+                psmFilter.apply(img)
                 .then(function(url){
                     img.src = url
                 })
             }else{
                 img.addEventListener('load', function(){
-                    img.src = mings.apply(img)
+                    img.src = psmFilter.apply(img)
                 }, { once: true })
             }
         }
@@ -62,8 +98,8 @@
 
         var init = document.getElementById('init')
         init.addEventListener('click', function(){
-            mings.set('init')
-            mings.apply().then(function(url){
+            psmFilter.set('init')
+            psmFilter.apply().then(function(url){
                 img.src = url
             })
         })
