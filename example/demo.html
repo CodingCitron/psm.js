@@ -6,104 +6,292 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body{
+            padding: 8px;
+        }
+
+        h1, h2, h3, h4, h5, h6{
+            margin: 0;
+        }
+
+        input, button, select{
+            padding: 2px 4px 2px 4px;
+        }
+
+        .title{
+            margin-bottom: 8px;
+        }
+        
         img{
             display: block;
         }
+
+        .tool-container{
+            display: flex;
+        }
+
+        .tool-container{
+            width: 300px;
+            margin-left: 16px;
+            flex-direction: column;
+        }
+
+        .tool-container input{
+            width: 100%;
+        }
+
+        .tool-container > div,
+        .tool-container > form{
+            margin-bottom: 8px;
+        }
+        
+        .tool-container h4{
+            height: 24px;
+            margin-right: 8px;
+        }
+
+        .tool-container form[name="convolute"] > div,
+        .tool-container .filter-btn{
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            column-gap: 4px;
+            row-gap: 4px;
+        }
+
+        .tool-container .filter-btn.special{
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .tool-container form[name="saturation"] > div{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 24px;
+        }
+
+        .tool-container form[name="convolute"] input,
+        .tool-container form[name="saturation"] > input{
+            margin-bottom: 3px;
+        }
+
+        #detect{
+            display: flex;
+        }
+
+        .img-container img{
+            margin-bottom: 3px;
+        }
+
     </style>
 </head>
 <body>
     <header>
-        <h2>Demo</h2>
+        <h2 class="title">Demo Image</h2>
     </header>
-    <div>
-        <img src="./img/house-6967908_640.jpg" alt="dog-img" id="dogImg">
-    </div>
-    <div>
-        <input type="range" id="range" min="-255" max="255" value="0">
-        <button type="button" id="init">초기화</button>
-    </div>
+    <section id="detect">
+            <div class="img-container">
+                <img src="./img/house-6967908_640.jpg" alt="dog-img" id="dogImg">
+                <div>
+                    <p>
+                        특정 필터의 input 요소에 입력 안 하고 적용 시 해당 필터는 적용시키지 않습니다. 예를 들어서 transparency input 에 input 값이 없을 경우 그 필터는 본래 imgData 값을 return 합니다.
+                    </p>
+                </div>
+            </div>
+            <div class="tool-container">
+                <form name="blur">
+                    <h4>blur</h4><input type="text" name="radius" placeholder="최소 2">
+                </form>
+                <form name="brightness">
+                    <h4>brightness</h4><input type="text" name="value">
+                </form>
+                <form name="contrast">
+                    <h4>contrast</h4><input type="text" name="value">
+                </form>
+                <form name="binary">
+                    <h4>binary</h4><input type="text" name="threshold" placeholder="0 ~ 1">
+                </form>
+                <form name="transparency">
+                    <h4>transparency</h4><input type="text" name="alpha" placeholder="0.1 ~ 1">
+                </form>
+                <form name="saturation">
+                    <h4>saturation</h4>
+                    <input type="text" name="red" placeholder="red">
+                    <input type="text" name="green" placeholder="green">
+                    <input type="text" name="blue" placeholder="blue">
+                    <div>
+                        <span>operator - saturation만 적용</span>
+                        <select name="operator">
+                            <option value="+">+</option>
+                            <option value="-">-</option>
+                            <option value="=">=</option>
+                            <option value="*">*</option>
+                            <option value="%">%</option>
+                        </select>
+                    </div>
+                </form>
+                <form name="convolute">
+                    <h4>convolute - 3x3</h4>
+                    <div>
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                        <input type="text" name="weights">
+                    </div>
+                </form>
+                <div class="filter-btn">
+                    <button type="button" value="grayscale">grayscale</button>
+                    <button type="button" value="invert">invert</button>
+                    <button type="button" value="sepia">sepia</button>
+                    <button type="button" value="binary">binary</button>
+                    <button type="button" value="sharpen">sharpen</button>
+                    <button type="button" value="sobel">sobel</button>
+                    <button type="button" value="edgeDetection">edgeDetection</button>
+                    <button type="button" value="gaussianBlur">gaussianBlur</button>
+                    <button type="button" value="embossImage">embossImage</button>
+                </div>
+                <div class="filter-btn special">
+                    <button type="button" value="apply">적용</button>
+                    <button type="button" value="init">초기화</button>
+                </div>
+            </div>
+    </section>
     <script src="../src/psm.js"></script>
     <script>
+        (function(){
+            const psmFilter = new psm.Filter(),
+            detect = document.getElementById('detect')
 
-        var img = document.querySelector('#dogImg'),
-        range = document.getElementById('range'),
-        psmFilter = new psm.Filter()
+            psmFilter.env({ 
+                setting: { 
+                    format: 'image/jpeg', 
+                    return: 'toBlob'
+                }, 
+                link: document.querySelector('#dogImg')
+            }).then(result => {
+                console.log(psmFilter.link.width)
+                document.querySelector('.img-container').style.width = psmFilter.link.width + 'px'
 
-        psmFilter.env({ 
-            setting: { 
-                format: 'image/jpeg', 
-                return: 'toBlob'
-            }, 
-            link: img
-        }).then(result => {
-            console.log('이미지가 연결되었습니다.')
-        })
-        
-        function filter(red){
-            // psmFilter.set('convolute', { 
-            //     weights: 
-            //     [ 0, -1, 0,
-            //     -1, 5, -1,
-            //     0, -1, 0 ],
-            //     opaque: 0
-            // })
+                console.log('이미지가 연결되었습니다.')
+            })
 
-            // psmFilter.set('sobel')
+            const img = psmFilter.link 
 
-            // psmFilter.set('edgeDetection')
-            psmFilter.set('blur', { radius: 5 })
-            // psmFilter.set('embossImage')
+            function filter(filter, option){
+                console.time('filter')
 
-            // psmFilter.set('sharpen')
+                psmFilter.set(filter, option)
+                
+                return new Promise(function(resolve, reject){
+                    if(img.complete){
+                        psmFilter.apply(img)
+                        .then(function(url){
+                            img.src = url
+                            resolve(true)
+                            console.timeEnd('filter')
+                        })
+                    }else{
+                        img.addEventListener('load', function(){
+                            psmFilter.apply(img)
+                            .then(function(url){
+                                img.src = url
+                                resolve(true)
+                                console.timeEnd('filter')
+                            })
+                        }, { once: true })
+                    }
+                })
+            }
 
-            // psmFilter.set('binary', { 
-            //   threshold: 0.2
-            // })
+            function init(){
+                console.time('init')
 
-            // psmFilter.set('saturation', { 
-            //     red: Number(red)
-            // })
-
-            // psmFilter.set('contrast', { 
-            //     value: 32
-            // })
-
-            // psmFilter.set('sepia')
-
-            // psmFilter.set('brightness', { 
-            //     value: 0
-            // })
-
-            // psmFilter.set('invert')
-
-            // psmFilter.set('grayscale')
-
-            if(img.complete){
-                psmFilter.apply(img)
-                .then(function(url){
+                psmFilter.set('init')
+                psmFilter.apply().then(function(url){
                     img.src = url
                 })
-            }else{
-                img.addEventListener('load', function(){
-                    img.src = psmFilter.apply(img)
-                }, { once: true })
+
+                for(var i = 0; i < detect.length; i++){
+                    console.log(detect[i])
+                }
+
+                console.timeEnd('init')
             }
-        }
 
-        range.addEventListener('input', function(){
-            console.time('filter')
-            filter(range.value)
-            console.timeEnd('filter')
-        })
+            var filterValue = {
+                blur: {},
+                brightness: {},
+                contrast: {},
+                saturation: {},
+                transparency: {},
+                binary: {},
+                convolute: {
+                    weights: []
+                },
+            }
 
-        var init = document.getElementById('init')
-        init.addEventListener('click', function(){
-            psmFilter.set('init')
-            psmFilter.apply().then(function(url){
-                img.src = url
+            var queue = []
+
+            var forms = document.querySelectorAll('#detect form')
+            var isRunFilter = false
+
+            detect.addEventListener('click', async function(e){
+                if(e.target.nodeName !== 'BUTTON' || isRunFilter) return
+                isRunFilter = true
+
+                if(e.target.value === 'apply'){
+                    filterValue.convolute.weights = []
+
+                    for(var i = 0; i < forms.length; i++){                        
+                        for(var j = 0; j < forms[i].length; j++){
+                            var value = isNaN(forms[i][j].value)? forms[i][j].value : Number(forms[i][j].value)
+                           
+                            if(forms[i][j].value === ''){
+                                value = ''
+                            }
+
+                            if(forms[i].name === 'convolute'){
+                                filterValue[forms[i].name].weights.push(value)
+                            }else{
+                                filterValue[forms[i].name][forms[i][j].name] = value
+                            }
+                        }
+                    }
+
+                    console.log(filterValue)
+
+                    for(var prop in filterValue){
+                        console.log(prop)
+                        await filter(prop, filterValue[prop])
+                        /*
+                            filter는 비동기 작업이니 click 이벤트 시 
+                            작동하는 익명함수가 여러번 작동 시 꼬임이 발생
+                            따라서 click 이벤트 작동 시 클릭을 막는 
+                            변수를 설정함
+                        */
+                    }
+                    
+                }else if(e.target.value === 'init'){
+                    init()
+                }else{
+                    filter(e.target.value)
+                }
+                // console.log(e.target.id)
+
+                isRunFilter = false
             })
-        })
 
+        })()
     </script>
 </body>
 </html>

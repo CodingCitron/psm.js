@@ -4,13 +4,17 @@
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.psm = {}))
 }(this, (function(exports){ 'use strict'
 
+    /* 수정해야하는 부분 
+        blur
+    */
+
     const correction = { /* interface, type, default value 설정  */
         filter: {
             brightness: {
-                value: ['number', 32]
+                value: ['number', 0]
             },
             contrast: {
-                value: ['number', 24]
+                value: ['number', 0]
             },
             grayscale: {
 
@@ -28,10 +32,10 @@
                 red: ['number', 0],
                 green: ['number', 0],
                 blue: ['number', 0],
-                operator: ['String', '+'], //+, -, =, *, %
+                operator: ['string', '+'], //+, -, =, *, %
             },
             blur: { //블러 옵션
-                radius: ['number', 3],
+                radius: ['number', 1],
             },
             transparency: {
                 alpha: ['number', 255],
@@ -74,8 +78,8 @@
 
     function operator(operator, ...operand){
 
-        var result = operand[0]
-        if(typeof operand[1] === 'undefined') return result 
+        var result = operand[0] 
+        if(typeof operand[1] === 'undefined' || operand[1] === '') return result 
 
         switch(operator){
             case '+': result = operand[0] + operand[1] 
@@ -124,10 +128,9 @@
         },
 
         brightness: function(pixels){
+            if(input.param.value === '') return pixels
             var v = numLeftOrRight(input.param.value, correction.filter.brightness.value[1]),
             data = pixels.data
-
-            if(correction.link[1]) data = repository.imgData.data
 
             for (var i = 0; i < data.length; i += 4){
                 pixels.data[i] = data[i] + v
@@ -140,8 +143,6 @@
 
         sepia: function(pixels){
             var data = pixels.data
-
-            if(correction.link[1]) data = repository.imgData.data
 
             for (var i = 0; i < data.length; i += 4){
                 var r = data[i],
@@ -158,12 +159,11 @@
 
         //https://stackoverflow.com/questions/10521978/html5-canvas-image-contrast/37714937
         contrast: function(pixels){
+            if(input.param.value === '') return pixels
             var contrastValue = numLeftOrRight(input.param.value, correction.filter.contrast.value[1]),
             contrast = (contrastValue/100) + 1,  //convert to decimal & shift range: [0..2]
             intercept = 128 * (1 - contrast),
             data = pixels.data
-
-            if(correction.link[1]) data = repository.imgData.data
 
             for (var i = 0; i < data.length; i += 4){
                 pixels.data[i] = data[i] * contrast + intercept
@@ -175,6 +175,7 @@
         },
 
         binary: function(pixels){
+            if(input.param.threshold === '') return pixels
             var threshold = numLeftOrRight(input.param.threshold, correction.filter.binary.threshold[1]),
             p = pixels.data,
             val, thresh = Math.floor(threshold * 255), gray 
@@ -200,8 +201,6 @@
             o = input.param.operator || correction.filter.saturation.operator[1],
             count
 
-            if(correction.link[1]) data = repository.imgData.data
-
             for (var i = 0; i < data.length; i += 4){
                 count = 0
                 for(var j = i; j < i + 3; j++){
@@ -214,9 +213,14 @@
         },
 
         convolute: function(pixels, weights, float32){ 
-            var opaque = numLeftOrRight(input.param.opaque, correction.filter.convolute.opaque[1]),
-            weights = weights || input.param.weights || correction.filter.convolute.weights[1],
-            side = Math.round(Math.sqrt(weights.length)),
+            var opaque = numLeftOrRight(input.param.opaque, correction.filter.convolute.opaque[1])
+            weights = weights || input.param.weights || correction.filter.convolute.weights[1]
+
+            if(!checkWeights(weights)){
+                return pixels     
+            }
+
+            var side = Math.round(Math.sqrt(weights.length)),
             cnt = numLeftOrRight(cnt, 1),
             halfSide = Math.floor(side/2),
             p = pixels.data,
@@ -274,17 +278,21 @@
         },
 
         blur: function(pixels){
-            console.log(input)
-            console.log(correction.filter.blur.radius[1])
-            var radius =  numLeftOrRight(input.param.radius, correction.filter.blur.radius[1]), 
-            val = 1/(radius * radius),
+            if(input.param.radius === '') return pixels
+            var radius =  numLeftOrRight(input.param.radius, correction.filter.blur.radius[1])
+
+            if(radius < 2) {
+                console.warn('radius ' + radius + '은 의미 없는 값입니다.')
+                return pixels
+            }
+
+            var val = 1/(radius * radius),
             array = []
 
             for(var i = 0; i < radius * radius; i++){
                 array.push(val)
             }
 
-            // console.log(calc)
             return this.convolute(pixels, array)
         },
 
@@ -307,7 +315,7 @@
             return id
         },
 
-        edgeDetection: function(pixels){
+        edgeDetection: function(pixels){ //미구현
             return this.convolute(pixels, [-1, -1, -1, -1, 8, -1, -1, -1, -1])
         },
         
@@ -316,17 +324,19 @@
         },
 
         gaussianBlur: function(pixels){ //미구현
-            returnthis.convolute(pixels, [-2, -1, 0, -1, 1, 1, 0, 1, 2])
+            return this.convolute(pixels, [-2, -1, 0, -1, 1, 1, 0, 1, 2])
         },
 
         transparency: function(pixels){
             var a = input.param.alpha,
             p = pixels.data
 
+            if(a === 1) return pixels
+
             if(a){
                 if(a < 1 && isFloat(a)){
                     for (var i = 0; i < p.length; i += 4){
-                                p[i + 3] = p[i + 3] * a
+                        p[i + 3] = p[i + 3] * a
                     }
                 }else{
                     for (var i = 0; i < p.length; i += 4){
@@ -335,6 +345,7 @@
                 } 
             } // if(a)
 
+            return pixels
         },
 
         init: function(){}
@@ -360,12 +371,25 @@
     function isNum(val){ return !isNaN(val) }
     function numLeftOrRight(...val){
         for(var i = 0; i < val.length; i++){
-            if(isNum(val[i])) return val[i]
+            if(val[i] !== '' &&  isNum(val[i])) return val[i]
             if(i === val.length - 1) return val[i]
         }
     }
     function isInteger(x) { return typeof x === "number" && isFinite(x) && Math.floor(x) === x }
     function isFloat(x) { return !!(x % 1) }
+    function checkWeights(weights){
+        if(Array.isArray(weights)){
+            for(var i = 0; i < weights.length; i++){
+                if(isNaN(weights[i]) || weights[i] === ''){
+                    return false
+                }
+            }
+
+            return true
+        }else{
+            return false
+        }
+    }
 
     Object.seal(correction)
     Object.seal(input)
@@ -381,6 +405,7 @@
             format: 'image/jpeg',
             return: 'toBlob'
         }
+        this.link
     }
 
     Filter.prototype.env = function({ width, height, setting, link }){
@@ -403,6 +428,7 @@
         if(link){
             if(link instanceof HTMLElement) {
                 correction.link[1] = link
+                this.link = link
                 var ready
 
                 if(!link.complete){
@@ -441,10 +467,6 @@
         this.ctx = canvas.getContext('2d')
     }
 
-    /*
-    rgb 값은 반드시 int or dubble
-    특정 filter의 parameter가 추가되면 이곳을 수정해야 한다.
-    */
     Filter.prototype.set = function(filter, option){
         if(correction.filter.hasOwnProperty(filter)){
             input.filter = filter
@@ -455,7 +477,11 @@
                         if(typeof option[prop] === correction.filter[filter][prop][0]){
                             input.param[prop] = option[prop]
                         }else{
-                            throw TypeError(''+ correction.filter[filter][prop][0] + ' 타입이 아닙니다.')
+                            if(option[prop] === ''){ //빈값 허용
+                                input.param[prop] = option[prop]
+                            }else{
+                                throw TypeError(option[prop] + '은 '+ correction.filter[filter][prop][0] + ' 타입이 아닙니다.')
+                            }
                         }
                     }else{ 
                         if(Array.isArray(option[prop])){
@@ -521,7 +547,6 @@
                 throw Error( 'correction.link가 ' + correction.link[1] +' 입니다. init은 link가 설정되어야 사용할 수 있습니다.')
             }
             imgData = repository.imgData
-            console.log(imgData)
         }else{
             imgData = this.ctx.getImageData(left, top, width, height)
             imgData = filterOption[input.filter](imgData)
