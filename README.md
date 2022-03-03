@@ -2,7 +2,7 @@
 
 캔버스를 사용해서 이미지를 편집하는 psm.js입니다. 
 
-<div align="center">
+<div align="center" width="100%">
   <img src="https://user-images.githubusercontent.com/78482307/156517786-2a2f0174-2b1c-47df-a8d6-9d3c51330c49.jpg" alt="original" title="original" width="33%"/>
   <img src="https://user-images.githubusercontent.com/78482307/156517984-82318953-722b-4118-b1c3-4c513481fda8.jpg" alt="grayscale" title="grayscale" width="33%"/>
   <img src="https://user-images.githubusercontent.com/78482307/156517999-e0417bb8-46dd-4105-92b7-892465bde7d1.jpg" alt="brightness" title="brightness" width="33%"/>
