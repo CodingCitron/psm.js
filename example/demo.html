@@ -187,6 +187,22 @@
 
             const img = psmFilter.link 
 
+            var filterValue = {
+                blur: {},
+                brightness: {},
+                contrast: {},
+                saturation: {},
+                transparency: {},
+                binary: {},
+                convolute: {
+                    weights: [],
+                    opaque: true
+                },
+            }
+
+            var forms = document.querySelectorAll('#detect form')
+            var isRunFilter = false
+
             function filter(filter, option){
                 console.time('filter')
 
@@ -219,34 +235,13 @@
                 psmFilter.set('init')
                 psmFilter.apply().then(function(url){
                     img.src = url
+                    console.timeEnd('init')
                 })
-
-                for(var i = 0; i < detect.length; i++){
-                    console.log(detect[i])
-                }
-
-                console.timeEnd('init')
             }
-
-            var filterValue = {
-                blur: {},
-                brightness: {},
-                contrast: {},
-                saturation: {},
-                transparency: {},
-                binary: {},
-                convolute: {
-                    weights: []
-                },
-            }
-
-            var queue = []
-
-            var forms = document.querySelectorAll('#detect form')
-            var isRunFilter = false
 
             detect.addEventListener('click', async function(e){
                 if(e.target.nodeName !== 'BUTTON' || isRunFilter) return
+                console.time('apply')
                 isRunFilter = true
 
                 if(e.target.value === 'apply'){
@@ -254,13 +249,22 @@
 
                     for(var i = 0; i < forms.length; i++){                        
                         for(var j = 0; j < forms[i].length; j++){
-                            var value = isNaN(forms[i][j].value)? forms[i][j].value : Number(forms[i][j].value)
+                            var value
                            
                             if(forms[i][j].value === ''){
                                 value = ''
+                            }else{
+                                value = isNaN(forms[i][j].value)? forms[i][j].value : parseFloat(forms[i][j].value)
                             }
 
                             if(forms[i].name === 'convolute'){
+
+                                value = parseFloat(value)
+
+                                if(isNaN(value)){
+                                    value = ''
+                                }
+
                                 filterValue[forms[i].name].weights.push(value)
                             }else{
                                 filterValue[forms[i].name][forms[i][j].name] = value
@@ -269,6 +273,7 @@
                     }
 
                     console.log(filterValue)
+
 
                     for(var prop in filterValue){
                         console.log(prop)
@@ -287,8 +292,9 @@
                     filter(e.target.value)
                 }
                 // console.log(e.target.id)
-
+                
                 isRunFilter = false
+                console.timeEnd('apply')
             })
 
         })()

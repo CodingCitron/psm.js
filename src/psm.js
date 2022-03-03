@@ -6,6 +6,7 @@
 
     /* 수정해야하는 부분 
         blur
+        Number() <- parseInt or parseFloat로 수정
     */
 
     const correction = { /* interface, type, default value 설정  */
@@ -42,7 +43,7 @@
             },
             convolute: {
                 weights: ['array', [0, 0, 0, 0, 0, 0, 0, 0, 0]], 
-                opaque: ['number', 0]
+                opaque: ['boolean', false]
             },
             sharpen: {},
             sobel: {},
@@ -195,11 +196,16 @@
         saturation: function(pixels){
             var r = input.param.red,
             g = input.param.green,
-            b = input.param.blue,
-            colorArray = [r, g, b],            
+            b = input.param.blue
+
+            if((isNaN(r) || r === '') && (isNaN(g) || g === '') && (isNaN(b) || b === '')) return pixels
+            
+            var colorArray = [r, g, b],            
             data = pixels.data,
             o = input.param.operator || correction.filter.saturation.operator[1],
             count
+
+            console.log(r, g, b, o)
 
             for (var i = 0; i < data.length; i += 4){
                 count = 0
@@ -212,8 +218,8 @@
             return pixels
         },
 
-        convolute: function(pixels, weights, float32){ 
-            var opaque = numLeftOrRight(input.param.opaque, correction.filter.convolute.opaque[1])
+        convolute: function(pixels, weights, float32, opaque){ 
+            var opaque = opaque || input.param.opaque || correction.filter.convolute.opaque[1]
             weights = weights || input.param.weights || correction.filter.convolute.weights[1]
 
             if(!checkWeights(weights)){
@@ -316,15 +322,15 @@
         },
 
         edgeDetection: function(pixels){ //미구현
-            return this.convolute(pixels, [-1, -1, -1, -1, 8, -1, -1, -1, -1])
+            return this.convolute(pixels, [1, 0, -1, 1, 0, -1, 1, 0, -1], null, true)
         },
         
         embossImage: function(pixels){
             return this.convolute(pixels, [-2, -1, 0, -1, 1, 1, 0, 1, 2])
         },
 
-        gaussianBlur: function(pixels){ //미구현
-            return this.convolute(pixels, [-2, -1, 0, -1, 1, 1, 0, 1, 2])
+        gaussianBlur: function(pixels){ 
+            return this.convolute(pixels, [1/16, 1/8, 1/16, 1/8, 1/4, 1/8, 1/16, 1/8, 1/16])
         },
 
         transparency: function(pixels){
@@ -333,7 +339,7 @@
 
             if(a === 1) return pixels
 
-            if(a){
+            if(a || a === 0){
                 if(a < 1 && isFloat(a)){
                     for (var i = 0; i < p.length; i += 4){
                         p[i + 3] = p[i + 3] * a
