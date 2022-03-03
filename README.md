@@ -1,7 +1,6 @@
 # psm.js
 
-캔버스를 사용해서 이미지를 편집하는 psm.js입니다. 
-이미지를 클릭하면 확대해서 볼 수 있습니다.
+캔버스를 사용해서 이미지를 편집하는 psm.js입니다.<br />이미지를 클릭하면 확대해서 볼 수 있습니다.
 
 <div align="center">
   <img src="https://user-images.githubusercontent.com/78482307/156517786-2a2f0174-2b1c-47df-a8d6-9d3c51330c49.jpg" alt="original" title="original" width="24.5%"/>
@@ -20,8 +19,7 @@
   <img src="https://user-images.githubusercontent.com/78482307/156518222-32089ff5-6853-4218-8154-33938defe5f5.jpg" alt="sharpen" title="sharpen" width="24.5%"/>
   <img src="https://user-images.githubusercontent.com/78482307/156518227-4ee9f4d0-6d0f-4b33-aa43-b0697d60e2e5.jpg" alt="sobel" title="sobel" width="24.5%"/>
 </div>
-
-
+<br />
 
 ## 사용방법
 
@@ -37,8 +35,7 @@
       filter.link.src = url
   })
 ```
-
-
+<br />
 
 ## 예제 파일
 
