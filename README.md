@@ -1,6 +1,7 @@
 # psm.js
 
-캔버스를 사용해서 이미지를 편집하는 psm.js입니다. 아래 이미지를 클릭하면 확대해서 볼 수 있습니다.
+캔버스를 사용해서 이미지를 편집하는 psm.js입니다. 
+이미지를 클릭하면 확대해서 볼 수 있습니다.
 
 <div align="center">
   <img src="https://user-images.githubusercontent.com/78482307/156517786-2a2f0174-2b1c-47df-a8d6-9d3c51330c49.jpg" alt="original" title="original" width="24.5%"/>
