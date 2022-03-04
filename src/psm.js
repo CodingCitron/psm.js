@@ -50,6 +50,9 @@
             edgeDetection: {},
             gaussianBlur: {},
             embossImage: {},
+            ascii: {
+                density: ['string', '1234567890']
+            },
             init: {}
         },
         link: ['HTMLElemnt', undefined], //element 원본을 유지한다.
@@ -205,8 +208,6 @@
             o = input.param.operator || correction.filter.saturation.operator[1],
             count
 
-            console.log(r, g, b, o)
-
             for (var i = 0; i < data.length; i += 4){
                 count = 0
                 for(var j = i; j < i + 3; j++){
@@ -354,6 +355,11 @@
             return pixels
         },
 
+        //https://www.youtube.com/watch?v=55iwMYv8tGI
+        ascii: function(pixels){
+            
+        },
+
         init: function(){}
     }
     
@@ -464,8 +470,6 @@
             }
             else throw TypeError('요소가 아닙니다.')
         }//if
-
-        // console.log(*)
     }
 
     Filter.prototype.changeCanvas = function(canvas){

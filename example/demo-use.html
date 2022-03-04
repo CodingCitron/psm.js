@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <img src="./img/school-6982073_1280.jpg">
+    <script src="../src/psm.js"></script>
+    <script>
+        var filter = new psm.Filter()
+
+        filter.env({
+            link: document.querySelector('img')
+        })
+
+        filter.set('sharpen')
+        filter.apply().then(function(url){
+            filter.link.src = url
+        })
+    </script>
+</body>
+</html>
