@@ -415,7 +415,7 @@
         this.ctx = canvas.getContext('2d')
         this.setting = {
             format: 'image/jpeg',
-            return: 'toBlob'
+            return: 'toBlob' //toDataURL, imgData 
         }
         this.link
     }
@@ -560,6 +560,10 @@
         }else{
             imgData = this.ctx.getImageData(left, top, width, height)
             imgData = filterOption[input.filter](imgData)
+        }
+
+        if(this.setting.return === 'imgData'){
+            return imgData
         }
 
         this.ctx.putImageData(imgData, left, top)
